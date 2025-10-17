@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  reverse-proxy:
+    image: traefik:2.10
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    restart: unless-stopped
+
+  # Example AI assistant service (Open WebUI or local model server)
+  ai_assistant:
+    image: ghcr.io/open-webui/open-webui:latest
+    environment:
+      - TZ=${TZ}
+      - MODEL_PATH=/models
+    volumes:
+      - ./tools/ai_assistant/models:/models
+      - ./tools/ai_assistant/config:/config
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  # Example automation service (n8n)
+  automation:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE}
+      - N8N_BASIC_AUTH_USER=${N8N_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./tools/automation/n8n:/home/node/.n8n
+    restart: unless-stopped
+
+networks:
+  default:
+    name: mega-jarvis-net
